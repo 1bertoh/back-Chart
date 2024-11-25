@@ -1,5 +1,4 @@
-from fastapi import FastAPI, UploadFile, HTTPException, Request
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from models.file.FileRepo import FileRepo
 from fastapi import Body
@@ -8,9 +7,8 @@ from fastapi import Body
 
 app = FastAPI()
 
-# Configuração CORS
 origins = [
-    "http://localhost:3000",  # Adicione outras origens conforme necessário
+    "http://localhost:3000", 
 ]
 
 app.add_middleware(

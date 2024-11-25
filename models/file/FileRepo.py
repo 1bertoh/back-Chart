@@ -1,5 +1,3 @@
-import math
-from fastapi import HTTPException
 import pandas as pd
 
 
@@ -9,12 +7,10 @@ class FileRepo():
         pass
 
     def readFile(self, path: str):
-        # Inclui a coluna DATARM diretamente
         columns_to_read = ["DATARM", "NOMECLI", "TOTAL_SEM_IPI", "TOTAL_IPI", "DESCONTO", "CODMERCRM", 'UFCLI', 'CIDCLI', "CODREPRM", "NOME_MERCA"]
         df = pd.read_excel(path, usecols=columns_to_read, engine='openpyxl', nrows=9000)
         
-        # Certifique-se de que DATARM está no formato datetime
-        df['DATARM'] = pd.to_datetime(df['DATARM'], format='%m/%d/%Y')  # Ajuste o formato conforme necessário
+        df['DATARM'] = pd.to_datetime(df['DATARM'], format='%m/%d/%Y') 
         return df
 
     def analyzeSales(self, dataframe: pd.DataFrame, granularity: str, year: str):
@@ -29,14 +25,11 @@ class FileRepo():
         Returns:
         - dict: Dados agrupados contendo vendas totais, descontos, vendas por cliente, representante, localização e produto.
         """
-        # Certifique-se de que a coluna de data está no formato datetime
         dataframe['DATARM'] = pd.to_datetime(dataframe['DATARM'], format='%m/%d/%Y')
 
-        # Filtrar por ano, se necessário
         if year != "all":
             dataframe = dataframe[dataframe['DATARM'].dt.year == int(year)]
 
-        # Escolha a granularidade
         if granularity == "daily":
             dataframe['Interval'] = dataframe['DATARM'].dt.date
         elif granularity == "monthly":
@@ -46,7 +39,6 @@ class FileRepo():
         else:
             raise ValueError("Granularity must be one of: 'daily', 'monthly', 'yearly'.")
 
-        # Dados principais: Vendas e Descontos
         sales_data = dataframe.groupby('Interval').agg(
             Total_Sales=('TOTAL_IPI', 'sum'),
             Total_Sales_No_IPI=('TOTAL_SEM_IPI', 'sum'),
@@ -54,21 +46,18 @@ class FileRepo():
             Total_Discounts_Discount=('DESCONTO', 'sum')
         ).reset_index()
 
-        # Vendas por cliente
         sales_by_client = dataframe.groupby(['Interval', 'NOMECLI']).agg(
             Total_Sales_No_IPI=('TOTAL_SEM_IPI', 'sum'),
             Total_Discounts_With_IPI=('TOTAL_IPI', 'sum'),
             Total_Discounts_Discount=('DESCONTO', 'sum')
         ).reset_index()
 
-        # Vendas por representante
         sales_by_rep = dataframe.groupby(['Interval', 'CODREPRM']).agg(
             Total_Sales_No_IPI=('TOTAL_SEM_IPI', 'sum'),
             Total_Discounts_With_IPI=('TOTAL_IPI', 'sum'),
             Total_Discounts_Discount=('DESCONTO', 'sum')
         ).reset_index()
 
-        # Distribuição geográfica
         cid_sales = dataframe.groupby(['Interval', 'CIDCLI']).agg(
             Total_Sales_No_IPI=('TOTAL_SEM_IPI', 'sum'),
             Total_Discounts_With_IPI=('TOTAL_IPI', 'sum'),
@@ -81,7 +70,6 @@ class FileRepo():
             Frequency=('UFCLI', 'count')
         ).reset_index()
 
-        # Produtos mais vendidos
         top_products = dataframe.groupby(['Interval', 'NOME_MERCA', 'CODMERCRM']).agg(
             Total_Sales_No_IPI=('TOTAL_SEM_IPI', 'sum'),
             Total_Discounts_With_IPI=('TOTAL_IPI', 'sum'),
@@ -89,7 +77,6 @@ class FileRepo():
             Frequency=('CODMERCRM', 'count')
         ).reset_index()
 
-        # Converta todos os agrupamentos para lista de dicionários
         result = {
             "Total_Sales_and_Discounts": sales_data.to_dict(orient="records"),
             "Sales_by_Client": sales_by_client.to_dict(orient="records"),
